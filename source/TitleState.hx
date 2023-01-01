@@ -14,7 +14,7 @@ import flixel.addons.transition.FlxTransitionableState;
 import flixel.addons.transition.TransitionData;
 import haxe.Json;
 import openfl.display.Bitmap;
-import penfl.display.BitmapData;
+import openfl.display.BitmapData;
 
 import options.GraphicsSettingsSubState;
 import flixel.graphics.frames.FlxAtlasFrames;
