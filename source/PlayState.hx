@@ -68,8 +68,16 @@ import vlc.MP4Handler;
 
 using StringTools;
 
+typedef SustainHit =
+{
+	var time:Float;
+	var healthVal:Float;
+}
+
 class PlayState extends MusicBeatState
 {
+	public var currentSustains:Array<SustainHit> = [];
+
 	public static var STRUM_X = 42;
 	public static var STRUM_X_MIDDLESCROLL = -278;
 
@@ -623,7 +631,6 @@ class PlayState extends MusicBeatState
 		healthBar = new FlxBar(healthBarBG.x + 4, healthBarBG.y + 4, RIGHT_TO_LEFT, Std.int(healthBarBG.width - 8), Std.int(healthBarBG.height - 8), this,
 			'health', 0, 2);
 		healthBar.scrollFactor.set();
-		// healthBar
 		healthBar.visible = !ClientPrefs.hideHud;
 		healthBar.alpha = ClientPrefs.healthBarAlpha;
 		add(healthBar);
@@ -659,25 +666,9 @@ class PlayState extends MusicBeatState
 			botplayTxt.y = timeBarBG.y - 78;
 		}
 
-		strumLineNotes.cameras = [camHUD];
-		grpNoteSplashes.cameras = [camHUD];
-		notes.cameras = [camHUD];
-		healthBar.cameras = [camHUD];
-		healthBarBG.cameras = [camHUD];
-		iconP1.cameras = [camHUD];
-		iconP2.cameras = [camHUD];
-		scoreTxt.cameras = [camHUD];
-		botplayTxt.cameras = [camHUD];
-		timeBar.cameras = [camHUD];
-		timeBarBG.cameras = [camHUD];
-		timeTxt.cameras = [camHUD];
-		doof.cameras = [camHUD];
+		for (e in [strumLineNotes,grpNoteSplashes,notes,healthBar,healthBarBG,iconP1,iconP2,scoreTxt,botplayTxt,timeBar,timeBarBG,timeTxt,doof])
+			e.cameras = [camHUD];
 
-		// if (SONG.song == 'South')
-		// FlxG.camera.alpha = 0.7;
-		// UI_camera.zoom = 1;
-
-		// cameras = [FlxG.cameras.list[1]];
 		startingSong = true;
 
 		var daSong:String = Paths.formatToSongPath(curSong);
@@ -1619,6 +1610,20 @@ class PlayState extends MusicBeatState
 			}
 		}
 
+		if(!inCutscene){
+			for (e in currentSustains)
+				{
+					if (e.time + Conductor.stepCrochet > Conductor.songPosition)
+					{
+						health += e.healthVal / (Conductor.stepCrochet / 1000) * FlxG.elapsed;
+					}
+					else
+					{
+						currentSustains.remove(e);
+					}
+				}
+		}
+
 		super.update(elapsed);
 
 		if(botplayTxt.visible) {
@@ -1695,8 +1700,6 @@ class PlayState extends MusicBeatState
 				{
 					songTime = (songTime + Conductor.songPosition) / 2;
 					Conductor.lastSongPos = Conductor.songPosition;
-					// Conductor.songPosition += FlxG.elapsed * 1000;
-					// trace('MISSED FRAME');
 				}
 
 				if(updateTime) {
@@ -1714,8 +1717,6 @@ class PlayState extends MusicBeatState
 						timeTxt.text = FlxStringUtil.formatTime(secondsTotal, false);
 				}
 			}
-
-			// Conductor.lastSongPos = FlxG.sound.music.time;
 		}
 
 		if (camZooming)
@@ -1905,14 +1906,6 @@ class PlayState extends MusicBeatState
 		persistentDraw = true;
 		paused = true;
 
-		// 1 / 1000 chance for Gitaroo Man easter egg
-		/*if (FlxG.random.bool(0.1))
-		{
-			// gitaroo man easter egg
-			cancelMusicFadeTween();
-			MusicBeatState.switchState(new GitarooPause());
-		}
-		else {*/
 		if(FlxG.sound.music != null) {
 			FlxG.sound.music.pause();
 			vocals.pause();
@@ -2526,8 +2519,7 @@ class PlayState extends MusicBeatState
 	{
 		var noteDiff:Float = Math.abs(note.strumTime - Conductor.songPosition + ClientPrefs.ratingOffset);
 		//trace(noteDiff, ' ' + Math.abs(note.strumTime - Conductor.songPosition));
-
-		// boyfriend.playAnim('hey');
+		
 		vocals.volume = 1;
 
 		var placement:String = Std.string(combo);
@@ -3068,9 +3060,15 @@ class PlayState extends MusicBeatState
 				combo += 1;
 				if(combo > 9999) combo = 9999;
 				popUpScore(note);
+				health += note.hitHealth * healthGain;
 			}
-			health += note.hitHealth * healthGain;
-
+			else{
+				currentSustains.push({
+					time: note.strumTime,
+					healthVal: note.hitHealth * healthGain
+				});
+			}
+			
 			if(!note.noAnimation) {
 				var animToPlay:String = singAnimations[Std.int(Math.abs(note.noteData))];
 
